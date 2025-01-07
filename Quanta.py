@@ -1,9 +1,9 @@
 #!/usr/bin/env python3.11
 # -*- coding: utf-8 -*-
 """
-# Quanta is a variable quantum calculater for qubit states and gates. This program will help understand states while building programs or systems for QPU's or qpu like services.
+# Quanta is a variable quantum calculater for qubit states and gates. This program will help understand states while building programs or systems for QPU's or qpu like services. Works with QELM.
 
-I built this to understand the spin variables for sub-bit processing in qubit states.
+I built this to understand the spin variables for sub-bit processing in qubit states, its not pretty but it works.
 
 """
 import sys
@@ -30,13 +30,15 @@ logging.basicConfig(
 )
 
 # --- Quantum Calculator Functionalities ---
-
 class QuantumCalculator:
     def __init__(self):
         self.backend = AerSimulator(method='statevector')
         logging.info("QuantumCalculator initialized with AerSimulator (statevector).")
 
     def observe_qubits(self, num_qubits: int, shots: int = 1024) -> Dict[str, int]:
+        """
+        Example method to measure qubits after applying Hadamard gates.
+        """
         try:
             circuit = QuantumCircuit(num_qubits, num_qubits)
             circuit.h(range(num_qubits))
@@ -52,6 +54,9 @@ class QuantumCalculator:
             raise
 
     def calculate_error_rates(self, num_qubits: int, shots: int = 1024) -> float:
+        """
+        Very rough example of "error rate" by counting how many outcomes have '1' in them.
+        """
         try:
             counts = self.observe_qubits(num_qubits, shots)
             total = sum(counts.values())
@@ -67,6 +72,9 @@ class QuantumCalculator:
             raise
 
     def calculate_gate_variables(self, gate_type: str, angle: float = 0.0, qubit: int = 0) -> QuantumCircuit:
+        """
+        Builds a simple circuit applying a single gate to a given qubit.
+        """
         try:
             circuit = QuantumCircuit(qubit + 1)
             if gate_type.upper() == 'RX':
@@ -89,10 +97,15 @@ class QuantumCalculator:
             raise
 
     def calculate_spin(self, qubit_state: Optional[str] = None) -> float:
+        """
+        Demonstration method for spin measurement. 
+        Here we measure in the X-basis after optionally preparing the qubit.
+        """
         try:
             circuit = QuantumCircuit(1, 1)
             if qubit_state == '1':
                 circuit.x(0)
+            # measure in the X-basis using H and then measure in the Z-basis
             circuit.h(0)
             circuit.measure(0, 0)
             circuit.save_statevector()
@@ -108,6 +121,9 @@ class QuantumCalculator:
             raise
 
     def grovers_speed_between_qubits(self, target_state: str, num_qubits: int) -> float:
+        """
+        Demonstration placeholder for Grover's speed calculation or iteration count.
+        """
         try:
             from qiskit.algorithms import Grover
             from qiskit.circuit.library import ZGate
@@ -116,10 +132,11 @@ class QuantumCalculator:
                 raise ValueError("Target state length must match the number of qubits.")
 
             oracle = QuantumCircuit(num_qubits)
+            # Very simple placeholder oracle
             for idx, bit in enumerate(target_state):
                 if bit == '0':
                     oracle.x(idx)
-            oracle.cz(num_qubits - 1, num_qubits - 2)  # Example two-qubit CZ gate as oracle
+            oracle.cz(num_qubits - 1, num_qubits - 2)  # Example: a CZ gate
             for idx, bit in enumerate(target_state):
                 if bit == '0':
                     oracle.x(idx)
@@ -128,7 +145,7 @@ class QuantumCalculator:
             grover = Grover(oracle=oracle)
             result = grover.run(self.backend)
             iterations = result.optimal_num_iterations
-            speed = iterations  # Placeholder for actual speed calculation
+            speed = iterations  # Placeholder metric
             logging.info(f"Grover's algorithm iterations: {iterations}")
             return speed
         except ImportError:
@@ -138,8 +155,34 @@ class QuantumCalculator:
             logging.error(f"Error in grovers_speed_between_qubits: {e}")
             raise
 
-# --- GUI Implementation ---
+    # --------------------------------------------------------------------------
+    # NEW: QELM / Quantum LLM Tools
+    # --------------------------------------------------------------------------
+    def calculate_transformer_qubits(self, embed_dim: int, num_heads: int) -> int:
+        """
+        Estimate how many qubits might be needed for a quantum-based Transformer attention.
+        A simplistic assumption: number of qubits ~ num_heads * log2(embed_dim)
+        """
+        if embed_dim <= 0 or num_heads <= 0:
+            raise ValueError("embed_dim and num_heads must be positive.")
+        qubits_needed = int(np.ceil(np.log2(embed_dim))) * num_heads
+        logging.info(f"Calculated qubits needed for embed_dim={embed_dim}, num_heads={num_heads}: {qubits_needed}")
+        return qubits_needed
 
+    def calculate_decoherence_corrections(self, qubits: int, circuit_depth: int) -> int:
+        """
+        Rough placeholder formula to estimate how many correction cycles might be needed
+        to keep qubits from decoherence, e.g. 'QEC cycles' or 'recalibration gates'.
+        """
+        if qubits <= 0 or circuit_depth <= 0:
+            raise ValueError("qubits and circuit_depth must be positive.")
+        # Arbitrary formula: corrections ~ qubits * circuit_depth * 2
+        corrections = qubits * circuit_depth * 2
+        logging.info(f"Calculated decoherence corrections for qubits={qubits}, depth={circuit_depth}: {corrections}")
+        return corrections
+
+
+# --- GUI Implementation ---
 class QuantumVerseCalculatorGUI:
     def __init__(self, master):
         self.master = master
@@ -157,29 +200,29 @@ class QuantumVerseCalculatorGUI:
         default_font = ("Helvetica", 10)
         style.configure(".", font=default_font)
 
-        # Configure styles with black text and existing background colors
+        # Configure styles with black text
         style.configure("TButton",
                         padding=6,
                         relief="flat",
-                        background="#4A90E2",  # Existing blue background
-                        foreground="black",     # Changed text color to black
+                        background="#4A90E2",
+                        foreground="black",
                         font=("Helvetica", 10, "bold"))
         style.map("TButton",
-                  background=[('active', '#357ABD')])  # Slightly darker on hover
+                  background=[('active', '#357ABD')])
 
         style.configure("TLabel",
-                        background="#2C3E50",    # Existing dark background
-                        foreground="black",      # Changed text color to black
+                        background="#2C3E50",
+                        foreground="black",
                         font=("Helvetica", 10))
         style.configure("TFrame",
-                        background="#2C3E50")    # Existing dark background
+                        background="#2C3E50")
         style.configure("TEntry",
-                        fieldbackground="#34495E",  # Existing entry background
-                        foreground="black",          # Changed text color to black
+                        fieldbackground="#34495E",
+                        foreground="black",
                         font=("Helvetica", 10))
         style.configure("TCombobox",
-                        fieldbackground="#34495E",  # Existing combobox background
-                        foreground="black",          # Changed text color to black
+                        fieldbackground="#34495E",
+                        foreground="black",
                         font=("Helvetica", 10))
         style.configure("TNotebook", background="#2C3E50")
         style.configure("TNotebook.Tab", background="#4A90E2", foreground="black", font=("Helvetica", 10, "bold"))
@@ -219,6 +262,13 @@ class QuantumVerseCalculatorGUI:
         self.notebook.add(self.tab_grover, text="Grover's Speed")
         self.create_grover_tab()
 
+        # ------------------------------------------------------------------
+        # NEW TAB: QELM Tools (Quantum LLM calculations)
+        # ------------------------------------------------------------------
+        self.tab_qelm = ttk.Frame(self.notebook)
+        self.notebook.add(self.tab_qelm, text="QELM Tools")
+        self.create_qelm_tab()
+
         # Settings Tab
         self.tab_settings = ttk.Frame(self.notebook)
         self.notebook.add(self.tab_settings, text="Settings")
@@ -227,9 +277,15 @@ class QuantumVerseCalculatorGUI:
         # Log Frame
         self.log_frame = ttk.LabelFrame(container, text="Logs", padding=10)
         self.log_frame.pack(fill='both', expand=True, pady=10)
-        self.log_text = scrolledtext.ScrolledText(self.log_frame, state='disabled', wrap='word', bg="#34495E", fg="black", font=("Helvetica", 10))
+        self.log_text = scrolledtext.ScrolledText(
+            self.log_frame, state='disabled', wrap='word',
+            bg="#34495E", fg="black", font=("Helvetica", 10)
+        )
         self.log_text.pack(fill='both', expand=True, padx=5, pady=5)
 
+    # ----------------------------------------------------------------------
+    # Existing Tabs
+    # ----------------------------------------------------------------------
     def create_observe_tab(self):
         frame = ttk.Frame(self.tab_observe, padding=20)
         frame.pack(fill='both', expand=True)
@@ -247,7 +303,9 @@ class QuantumVerseCalculatorGUI:
         observe_button = ttk.Button(frame, text="Observe", command=self.observe_qubits)
         observe_button.grid(row=2, column=0, columnspan=2, pady=20)
 
-        self.observe_result = scrolledtext.ScrolledText(frame, height=10, state='disabled', bg="#34495E", fg="black", font=("Helvetica", 10))
+        self.observe_result = scrolledtext.ScrolledText(
+            frame, height=10, state='disabled', bg="#34495E", fg="black", font=("Helvetica", 10)
+        )
         self.observe_result.grid(row=3, column=0, columnspan=2, padx=10, pady=10)
 
     def create_error_tab(self):
@@ -294,7 +352,9 @@ class QuantumVerseCalculatorGUI:
         gate_button = ttk.Button(frame, text="Apply Gate", command=self.apply_gate)
         gate_button.grid(row=3, column=0, columnspan=2, pady=20)
 
-        self.gate_result = scrolledtext.ScrolledText(frame, height=10, state='disabled', bg="#34495E", fg="black", font=("Helvetica", 10))
+        self.gate_result = scrolledtext.ScrolledText(
+            frame, height=10, state='disabled', bg="#34495E", fg="black", font=("Helvetica", 10)
+        )
         self.gate_result.grid(row=4, column=0, columnspan=2, padx=10, pady=10)
 
     def create_spin_tab(self):
@@ -334,6 +394,44 @@ class QuantumVerseCalculatorGUI:
         self.grover_result = ttk.Label(frame, text="Grover's Speed: N/A", font=("Helvetica", 12, "bold"))
         self.grover_result.grid(row=3, column=0, columnspan=2, pady=10)
 
+    # ----------------------------------------------------------------------
+    # NEW: QELM Tools Tab
+    # ----------------------------------------------------------------------
+    def create_qelm_tab(self):
+        frame = ttk.Frame(self.tab_qelm, padding=20)
+        frame.pack(fill='both', expand=True)
+
+        # embed_dim
+        ttk.Label(frame, text="Embedding Dimension (embed_dim):").grid(row=0, column=0, padx=10, pady=10, sticky='e')
+        self.qelm_embed_entry = ttk.Entry(frame, width=15)
+        self.qelm_embed_entry.insert(0, "64")
+        self.qelm_embed_entry.grid(row=0, column=1, padx=10, pady=10, sticky='w')
+
+        # num_heads
+        ttk.Label(frame, text="Number of Attention Heads:").grid(row=1, column=0, padx=10, pady=10, sticky='e')
+        self.qelm_heads_entry = ttk.Entry(frame, width=15)
+        self.qelm_heads_entry.insert(0, "4")
+        self.qelm_heads_entry.grid(row=1, column=1, padx=10, pady=10, sticky='w')
+
+        # circuit_depth
+        ttk.Label(frame, text="Circuit Depth (approx):").grid(row=2, column=0, padx=10, pady=10, sticky='e')
+        self.qelm_depth_entry = ttk.Entry(frame, width=15)
+        self.qelm_depth_entry.insert(0, "10")
+        self.qelm_depth_entry.grid(row=2, column=1, padx=10, pady=10, sticky='w')
+
+        # Button
+        qelm_button = ttk.Button(frame, text="Compute QELM", command=self.calculate_qelm)
+        qelm_button.grid(row=3, column=0, columnspan=2, pady=20)
+
+        # Results
+        self.qelm_result = scrolledtext.ScrolledText(
+            frame, height=10, state='disabled', bg="#34495E", fg="black", font=("Helvetica", 10)
+        )
+        self.qelm_result.grid(row=4, column=0, columnspan=2, padx=10, pady=10)
+
+    # ----------------------------------------------------------------------
+    # Settings Tab
+    # ----------------------------------------------------------------------
     def create_settings_tab(self):
         frame = ttk.Frame(self.tab_settings, padding=20)
         frame.pack(fill='both', expand=True)
@@ -357,6 +455,40 @@ class QuantumVerseCalculatorGUI:
         apply_button = ttk.Button(frame, text="Apply Settings", command=self.apply_settings)
         apply_button.grid(row=2, column=0, columnspan=2, pady=20)
 
+    # ----------------------------------------------------------------------
+    # QELM Tools Calculation Function
+    # ----------------------------------------------------------------------
+    def calculate_qelm(self):
+        """
+        Compute how many qubits are needed for a quantum-attention based approach
+        and how many decoherence corrections might be required for a given depth.
+        """
+        try:
+            embed_dim = int(self.qelm_embed_entry.get())
+            num_heads = int(self.qelm_heads_entry.get())
+            circuit_depth = int(self.qelm_depth_entry.get())
+            if embed_dim <= 0 or num_heads <= 0 or circuit_depth <= 0:
+                raise ValueError
+
+            qubits_needed = self.calculator.calculate_transformer_qubits(embed_dim, num_heads)
+            corrections = self.calculator.calculate_decoherence_corrections(qubits_needed, circuit_depth)
+
+            self.qelm_result.config(state='normal')
+            self.qelm_result.delete('1.0', tk.END)
+            self.qelm_result.insert(tk.END, f"Qubits Needed: {qubits_needed}\n")
+            self.qelm_result.insert(tk.END, f"Estimated Correction Cycles: {corrections}\n")
+            self.qelm_result.config(state='disabled')
+
+            self.log(f"QELM Calculation => embed_dim={embed_dim}, num_heads={num_heads}, depth={circuit_depth}, qubits={qubits_needed}, corrections={corrections}.")
+        except ValueError:
+            messagebox.showerror("Invalid Input", "Please enter valid positive integers for embed_dim, num_heads, and circuit_depth.")
+        except Exception as e:
+            messagebox.showerror("Error", f"An error occurred: {e}")
+            logging.error(f"Error in calculate_qelm: {e}")
+
+    # ----------------------------------------------------------------------
+    # The rest of the UI callbacks
+    # ----------------------------------------------------------------------
     def update_font_size(self):
         new_size = self.font_size_var.get()
         default_font = ("Helvetica", new_size)
@@ -369,7 +501,7 @@ class QuantumVerseCalculatorGUI:
     def change_theme(self, event):
         theme = self.theme_var.get()
         if theme == "Light":
-            self.master.configure(bg="#ECF0F1")  # Light background
+            self.master.configure(bg="#ECF0F1")
             style = ttk.Style()
             style.configure("TButton",
                             background="#4A90E2",
@@ -398,7 +530,7 @@ class QuantumVerseCalculatorGUI:
                       foreground=[('selected', 'black')])
             self.log_text.config(bg="#ffffff", fg="black")
         else:
-            self.master.configure(bg="#2C3E50")  # Dark background
+            self.master.configure(bg="#2C3E50")
             style = ttk.Style()
             style.configure("TButton",
                             background="#4A90E2",
@@ -547,11 +679,10 @@ class QuantumVerseCalculatorGUI:
             self.master.after(100, self.process_log_queue)
 
 # --- Main Execution ---
-
 def main():
     try:
         root = tk.Tk()
-        root.configure(bg="#2C3E50")  # Maintain existing dark background
+        root.configure(bg="#2C3E50")
         app = QuantumVerseCalculatorGUI(root)
         root.mainloop()
     except Exception as e:
